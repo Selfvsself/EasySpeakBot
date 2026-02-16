@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     bot_name: SecretStr
     bot_token: SecretStr
     db_url: str
+    kafka_url: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,7 +1,10 @@
+import logging
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
 
 from database.requests import log_message
+from infrastructure.kafka import kafka_client
 
 router = Router()
 
@@ -29,7 +32,11 @@ async def echo_handler(message: types.Message):
         text=message.text,
         username=message.from_user.username
     )
-    await message.send_copy(chat_id=message.chat.id)
+    await kafka_client.send_log("messages_topic", {
+        "user_id": message.from_user.id,
+        "text": message.text
+    })
+    logging.info(f"Send message to {message.from_user.id} message: {message.text}")
 
 
 @router.message()
