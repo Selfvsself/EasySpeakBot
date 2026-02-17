@@ -2,8 +2,9 @@ import asyncio
 import logging
 
 from database.engine import proceed_db
-from handlers import start, common
+from handlers import common, start
 from infrastructure.kafka import kafka_client
+from infrastructure.topics import RESPONSES_TOPIC
 from loader import bot, dp
 from workers import llm_worker
 
@@ -13,28 +14,33 @@ logging.basicConfig(
 )
 
 
-async def on_startup():
+async def on_startup() -> None:
     await kafka_client.start()
     logging.info("Kafka producer started")
 
 
-async def on_shutdown():
+async def on_shutdown() -> None:
     await kafka_client.stop()
     logging.info("Kafka producer stopped")
 
 
-async def answer_consumer_task():
-    async for data in kafka_client.consume_answers("responses_topic"):
+async def answer_consumer_task() -> None:
+    async for data in kafka_client.consume_topic(RESPONSES_TOPIC):
         user_id = data.get("user_id")
         text = data.get("text")
-        logging.info(f"Received message from {user_id} message: {text}")
+
+        if user_id is None or text is None:
+            logging.warning("Skip invalid Kafka payload: %s", data)
+            continue
+
+        logging.info("Received message from %s: %s", user_id, text)
         try:
             await bot.send_message(chat_id=user_id, text=f"Ответ: {text}")
-        except Exception as e:
-            logging.error(f"Ошибка при отправке: {e}")
+        except Exception:
+            logging.exception("Ошибка при отправке сообщения пользователю %s", user_id)
 
 
-async def main():
+async def main() -> None:
     await proceed_db()
     dp.include_routers(start.router, common.router)
     dp.startup.register(on_startup)
