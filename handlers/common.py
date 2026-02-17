@@ -31,6 +31,7 @@ async def echo_handler(message: types.Message) -> None:
         logging.warning("Skip message without text or user: %s", message)
         return
 
+    await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
     await log_message(
         user_id=message.from_user.id,
         text=message.text,

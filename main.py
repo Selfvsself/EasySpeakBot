@@ -37,7 +37,7 @@ async def answer_consumer_task() -> None:
         try:
             await bot.send_message(chat_id=user_id, text=f"Ответ: {text}")
         except Exception:
-            logging.exception("Ошибка при отправке сообщения пользователю %s", user_id)
+            logging.exception("Error sending message to user %s", user_id)
 
 
 async def main() -> None:

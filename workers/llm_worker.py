@@ -27,4 +27,4 @@ async def answer_consumer_task() -> None:
                 {"user_id": user_id, "text": ai_response},
             )
         except Exception:
-            logging.exception("Ошибка при отправке ответа в Kafka")
+            logging.exception("Error sending response to Kafka")
