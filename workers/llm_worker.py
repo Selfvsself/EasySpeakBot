@@ -1,6 +1,8 @@
 import logging
 
-from database.requests import log_message
+from langchain_core.messages import HumanMessage, AIMessage
+
+from database.requests import save_message, get_recent_messages
 from infrastructure.kafka import kafka_client
 from infrastructure.topics import MESSAGES_TOPIC, RESPONSES_TOPIC
 from utils.llm_client import get_llm_answer
@@ -16,9 +18,16 @@ async def answer_consumer_task() -> None:
             continue
 
         logging.info("Received request to LLM from %s: %s", user_id, text)
-        ai_response = await get_llm_answer(text)
+        db_history = await get_recent_messages(user_id, limit=10)
+        langchain_history = []
+        for msg in db_history:
+            if msg.username == "assistant":
+                langchain_history.append(AIMessage(content=msg.text))
+            else:
+                langchain_history.append(HumanMessage(content=msg.text))
+        ai_response = await get_llm_answer(text, history=langchain_history)
 
-        await log_message(user_id=user_id, text=ai_response, username="assistant")
+        await save_message(user_id=user_id, text=ai_response, username="assistant")
         logging.info("Received answer from LLM for %s: %s", user_id, ai_response)
 
         try:
