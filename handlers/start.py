@@ -1,6 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from aiogram.utils.markdown import hbold
+from aiogram.utils.markdown import hbold, hitalic
 
 router = Router()
 
@@ -14,7 +14,7 @@ async def cmd_start(message: types.Message):
         f"I'm {hbold('Alex')}, your new English-speaking buddy from London. 🇬🇧\n\n"
         "I'm here to chat with you about anything — from the rainy British weather "
         "to the latest movies or your daily routine. "
-        "The best part? {hitalic('I will help you improve your English while we talk!')}\n\n"
+        f"The best part? {hitalic('I will help you improve your English while we talk!')}\n\n"
         f"💡 {hbold('How it works:')}\n"
         "1. Just type anything in English (or any language, but I'll stick to English!).\n"
         "2. I'll reply like a real friend.\n"
