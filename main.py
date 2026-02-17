@@ -35,7 +35,7 @@ async def answer_consumer_task() -> None:
 
         logging.info("Received message from %s: %s", user_id, text)
         try:
-            await bot.send_message(chat_id=user_id, text=f"Ответ: {text}")
+            await bot.send_message(chat_id=user_id, text=text)
         except Exception:
             logging.exception("Error sending message to user %s", user_id)
 
