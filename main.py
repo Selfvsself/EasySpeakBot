@@ -5,6 +5,7 @@ from database.engine import proceed_db
 from handlers import start, common
 from infrastructure.kafka import kafka_client
 from loader import bot, dp
+from workers import llm_worker
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,7 +24,7 @@ async def on_shutdown():
 
 
 async def answer_consumer_task():
-    async for data in kafka_client.consume_answers("messages_topic"):
+    async for data in kafka_client.consume_answers("responses_topic"):
         user_id = data.get("user_id")
         text = data.get("text")
         logging.info(f"Received message from {user_id} message: {text}")
@@ -40,6 +41,7 @@ async def main():
     dp.shutdown.register(on_shutdown)
 
     asyncio.create_task(answer_consumer_task())
+    asyncio.create_task(llm_worker.answer_consumer_task())
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

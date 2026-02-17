@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     bot_token: SecretStr
     db_url: str
     kafka_url: str
+    ollama_url: str
+    ollama_model: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
