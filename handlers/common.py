@@ -4,7 +4,6 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.utils.markdown import hbold, hitalic
 
-from database.requests import save_message
 from infrastructure.kafka import kafka_client
 from infrastructure.topics import MESSAGES_TOPIC
 
@@ -36,15 +35,11 @@ async def text_message_handler(message: types.Message) -> None:
         return
 
     await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
-    await save_message(
-        user_id=message.from_user.id,
-        text=message.text,
-        username=message.from_user.username,
-    )
     await kafka_client.send_message(
         MESSAGES_TOPIC,
         {
             "user_id": message.from_user.id,
+            "user_name": message.from_user.username,
             "text": message.text,
         },
     )

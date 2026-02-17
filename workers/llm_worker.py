@@ -11,6 +11,7 @@ from utils.llm_client import get_llm_answer
 async def answer_consumer_task() -> None:
     async for data in kafka_client.consume_topic(MESSAGES_TOPIC):
         user_id = data.get("user_id")
+        user_name = data.get("user_name")
         text = data.get("text")
 
         if user_id is None or text is None:
@@ -25,6 +26,9 @@ async def answer_consumer_task() -> None:
                 langchain_history.append(AIMessage(content=msg.text))
             else:
                 langchain_history.append(HumanMessage(content=msg.text))
+
+        await save_message(user_id=user_id, text=text, username=user_name)
+
         ai_response = await get_llm_answer(text, history=langchain_history)
 
         await save_message(user_id=user_id, text=ai_response, username="assistant")
