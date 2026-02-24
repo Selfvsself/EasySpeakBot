@@ -2,7 +2,7 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.filters import Command
-from aiogram.utils.markdown import hbold, hitalic
+from aiogram.utils.markdown import hbold
 
 from infrastructure.kafka import kafka_client
 from infrastructure.topics import MESSAGES_TOPIC
@@ -13,13 +13,13 @@ router = Router()
 @router.message(Command("help"))
 async def cmd_help(message: types.Message) -> None:
     help_text = (
-        f"🇬🇧 {hbold('Cheers! I am Alex, your London buddy.')}\n\n"
+        f"🇬🇧 *Cheers! I am Alex, your London buddy.*\n\n"
         "I'm here to help you practice your English in a natural way. "
         "Just send me a message, and let's chat! ☕️\n\n"
-        f"{hbold('Available commands:')}\n"
-        f"/{hbold('start')} — Start our conversation\n"
-        f"/{hbold('help')} — Show this info\n\n"
-        f"{hitalic('Note: I will always reply in English to help you learn faster. ')}"
+        f"*Available commands:*\n"
+        f"/*start* — Start our conversation\n"
+        f"/*help* — Show this info\n\n"
+        f"_Note: I will always reply in English to help you learn faster. _"
         "If you make a mistake, I'll gently point it out at the end of my message. 😉"
     )
 
@@ -38,9 +38,10 @@ async def text_message_handler(message: types.Message) -> None:
     await kafka_client.send_message(
         MESSAGES_TOPIC,
         {
+            "app": "easy_speak_bot",
             "user_id": message.from_user.id,
             "user_name": message.from_user.username,
-            "text": message.text,
+            "text": message.text
         },
     )
     logging.info("Send message to %s: %s", message.from_user.id, message.text)

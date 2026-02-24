@@ -6,6 +6,6 @@ from config import config
 
 bot = Bot(
     token=config.bot_token.get_secret_value(),
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN))
 
 dp = Dispatcher()

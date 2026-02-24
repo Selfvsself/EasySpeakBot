@@ -14,7 +14,7 @@ async def answer_consumer_task() -> None:
             logging.warning("Skip invalid Kafka payload: %s", data)
             continue
 
-        logging.info("Received message from %s: %s", user_id, text)
+        logging.info("Send message to %s: %s", user_id, text)
         try:
             await bot.send_message(chat_id=user_id, text=text)
         except Exception:
