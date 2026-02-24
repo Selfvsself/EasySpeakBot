@@ -19,8 +19,7 @@ async def get_unsummarized_messages(user_id: int):
             .order_by(ChatMessage.created_at.asc())
         )
         result = await session.execute(query)
-        messages = result.scalars().all()
-        return messages[::-1]
+        return result.scalars().all()
 
 
 async def mark_messages_as_summarized(message_ids: list[int]):
