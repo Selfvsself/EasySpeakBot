@@ -58,7 +58,6 @@ async def answer_consumer_task() -> None:
 
         if len(db_history) > 15:
             to_process = db_history[10::]
-            to_process = to_process[::-1]
             new_text_block = ""
             for m in to_process:
                 if not m.username == "assistant":
