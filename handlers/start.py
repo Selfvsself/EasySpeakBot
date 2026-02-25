@@ -1,5 +1,10 @@
+import logging
+
 from aiogram import Router, types
 from aiogram.filters import Command
+
+from infrastructure.kafka import kafka_client
+from infrastructure.topics import RESPONSES_TOPIC
 
 router = Router()
 
@@ -21,6 +26,13 @@ async def cmd_start(message: types.Message):
         "So, how's your day going? ☕️"
     )
 
-    await message.answer(
-        text=welcome_text
+    await kafka_client.send_message(
+        RESPONSES_TOPIC,
+        {
+            "app": "easy_speak_bot",
+            "user_id": message.from_user.id,
+            "user_name": message.from_user.username,
+            "text": welcome_text
+        },
     )
+    logging.info("Send message to %s: %s", message.from_user.id, message.text)

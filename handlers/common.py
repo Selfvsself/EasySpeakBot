@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.utils.markdown import hbold
 
 from infrastructure.kafka import kafka_client
-from infrastructure.topics import MESSAGES_TOPIC
+from infrastructure.topics import MESSAGES_TOPIC, RESPONSES_TOPIC
 
 router = Router()
 
@@ -23,9 +23,16 @@ async def cmd_help(message: types.Message) -> None:
         "If you make a mistake, I'll gently point it out at the end of my message. 😉"
     )
 
-    await message.answer(
-        text=help_text
+    await kafka_client.send_message(
+        RESPONSES_TOPIC,
+        {
+            "app": "easy_speak_bot",
+            "user_id": message.from_user.id,
+            "user_name": message.from_user.username,
+            "text": help_text
+        },
     )
+    logging.info("Send message to %s: %s", message.from_user.id, message.text)
 
 
 @router.message(F.text)
