@@ -46,6 +46,7 @@ async def answer_consumer_task() -> None:
             bio_data=profile.bio_data
         )
         ai_translation = await get_translation_with_llm(ai_response)
+
         ai_correction = ""
         if db_history:
             ai_correction = await check_errors_with_llm(
