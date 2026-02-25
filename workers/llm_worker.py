@@ -6,7 +6,8 @@ from database.messages_requests import save_message, get_unsummarized_messages, 
 from database.users_requests import get_user_profile, update_user_profile
 from infrastructure.kafka import kafka_client
 from infrastructure.topics import MESSAGES_TOPIC, RESPONSES_TOPIC
-from utils.llm_client import get_llm_answer, update_bio_with_llm, update_summary_with_llm
+from utils.llm_client import get_llm_answer, check_errors_with_llm, update_bio_with_llm, update_summary_with_llm, \
+    get_translation_with_llm
 
 
 async def answer_consumer_task() -> None:
@@ -44,6 +45,14 @@ async def answer_consumer_task() -> None:
             history=langchain_history,
             bio_data=profile.bio_data
         )
+        ai_translation = await get_translation_with_llm(ai_response)
+
+        ai_correction = ""
+        if db_history:
+            ai_correction = await check_errors_with_llm(
+                db_history[-1].text,
+                text
+            )
 
         await save_message(user_id=user_id, text=ai_response, username="assistant")
         logging.info("Received answer from LLM for %s: %s", user_id, ai_response)
@@ -51,17 +60,23 @@ async def answer_consumer_task() -> None:
         try:
             await kafka_client.send_message(
                 RESPONSES_TOPIC,
-                {"user_id": user_id, "text": ai_response},
+                {"user_id": user_id,
+                 "text": ai_response,
+                 "translation": ai_translation,
+                 "corrections": ai_correction},
             )
         except Exception:
             logging.exception("Error sending response to Kafka")
 
         if len(db_history) > 15:
-            to_process = db_history[10::]
+            to_process = db_history[:-10]
             new_text_block = ""
             for m in to_process:
+                role = "ai assistant"
                 if not m.username == "assistant":
-                    new_text_block += f"{m.text}\n"
+                    role = "user"
+                text = m.text.replace("\n", " ")
+                new_text_block += f"{role}: '{text}'\n"
 
             new_bio = await update_bio_with_llm(profile.bio_data, new_text_block)
             new_summary = await update_summary_with_llm(str(profile.summary), new_text_block)

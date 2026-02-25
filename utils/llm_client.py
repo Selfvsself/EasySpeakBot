@@ -6,7 +6,7 @@ from langchain_ollama import ChatOllama
 
 from config import config
 from .bio_update_prompt import bio_update_prompt
-from .chat_prompt import chat_prompt, summary_prompt
+from .chat_prompt import chat_prompt, summary_prompt, correction_prompt, translation_prompt
 
 llm = ChatOllama(
     base_url=config.ollama_url,
@@ -22,10 +22,11 @@ llm_json = ChatOllama(
     temperature=0.1,
 )
 
-# Цепочки
 chat_chain = chat_prompt | llm | StrOutputParser()
 bio_chain = bio_update_prompt | llm_json | JsonOutputParser()
 summary_chain = summary_prompt | llm | StrOutputParser()
+correction_chain = correction_prompt | llm | StrOutputParser()
+translation_chain = translation_prompt | llm | StrOutputParser()
 
 
 async def get_llm_answer(user_text: str, history: list = None, bio_data: dict = None) -> str:
@@ -40,11 +41,37 @@ async def get_llm_answer(user_text: str, history: list = None, bio_data: dict = 
         response = await chat_chain.ainvoke({
             "user_input": user_text,
             "history": history,
-            "user_profile": profile_str  # Передаем сюда
+            "user_profile": profile_str
         })
         return response
     except Exception as e:
         return f"Sorry, my London tube is delayed (error: {e}) 🚇"
+
+
+async def check_errors_with_llm(last_bot_message: str, user_text: str) -> str:
+    try:
+        response = await correction_chain.ainvoke({
+            "alex_response": last_bot_message,
+            "user_input": user_text
+        })
+
+        cleaned_response = response.strip()
+        if cleaned_response.lower().startswith("no mistakes") or not cleaned_response:
+            return ""
+
+        return cleaned_response
+    except Exception as e:
+        logging.error(f"Correction error: {e}")
+        return ""
+
+
+async def get_translation_with_llm(alex_text: str) -> str:
+    try:
+        response = await translation_chain.ainvoke({"alex_response": alex_text})
+        return response.strip()
+    except Exception as e:
+        logging.error(f"Translation error: {e}")
+        return ""
 
 
 async def update_bio_with_llm(current_bio: dict, new_messages_text: str) -> dict:
