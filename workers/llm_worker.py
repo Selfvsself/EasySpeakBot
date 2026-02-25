@@ -57,11 +57,14 @@ async def answer_consumer_task() -> None:
             logging.exception("Error sending response to Kafka")
 
         if len(db_history) > 15:
-            to_process = db_history[10::]
+            to_process = db_history[:-10]
             new_text_block = ""
             for m in to_process:
+                role = "ai assistant"
                 if not m.username == "assistant":
-                    new_text_block += f"{m.text}\n"
+                    role = "user"
+                text = m.text.replace("\n", " ")
+                new_text_block += f"{role}: '{text}'\n"
 
             new_bio = await update_bio_with_llm(profile.bio_data, new_text_block)
             new_summary = await update_summary_with_llm(str(profile.summary), new_text_block)
