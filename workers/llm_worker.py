@@ -46,10 +46,13 @@ async def answer_consumer_task() -> None:
             bio_data=profile.bio_data
         )
         ai_translation = await get_translation_with_llm(ai_response)
-        ai_correction = await check_errors_with_llm(
-            db_history[-1].text,
-            text
-        )
+
+        ai_correction = ""
+        if db_history:
+            ai_correction = await check_errors_with_llm(
+                db_history[-1].text,
+                text
+            )
 
         await save_message(user_id=user_id, text=ai_response, username="assistant")
         logging.info("Received answer from LLM for %s: %s", user_id, ai_response)
