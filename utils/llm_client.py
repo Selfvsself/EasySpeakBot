@@ -22,7 +22,6 @@ llm_json = ChatOllama(
     temperature=0.1,
 )
 
-# Цепочки
 chat_chain = chat_prompt | llm | StrOutputParser()
 bio_chain = bio_update_prompt | llm_json | JsonOutputParser()
 summary_chain = summary_prompt | llm | StrOutputParser()
