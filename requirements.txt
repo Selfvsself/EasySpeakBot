@@ -1,7 +1,8 @@
 aiogram==3.25.0
 aiokafka==0.12.0
-langchain_core==1.2.15
+ddgs==9.10.0
+langchain_core==1.2.16
 langchain_ollama==1.0.1
 pydantic==2.12.5
 pydantic_settings==2.13.1
-SQLAlchemy==2.0.46
+SQLAlchemy==2.0.47
