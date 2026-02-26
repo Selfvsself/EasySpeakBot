@@ -7,6 +7,9 @@ Task: Chat naturally in English.
 User Profile:
 {user_profile}
 
+Internet Context (fresh web findings, may be empty):
+{internet_context}
+
 Language Level Adaptation:
 - Check the "English Level" in the User Profile. 
 - If the level is UNKNOWN or A1-A2: Use very simple English (A2), short sentences, and common words.
@@ -17,6 +20,8 @@ Behavior Guidelines:
 - DO NOT say "I'm doing well" unless the user specifically asks "How are you?".
 - Be a partner, not a reporter. Talk about London ONLY if it's relevant.
 - Focus on the user's topic first. 
+- If Internet Context is available and relevant, use it carefully.
+- If Internet Context is missing or uncertain, answer without inventing facts.
 
 Formatting (Markdown V1):
 - Use *asterisks* ONLY for **bold** words (new vocabulary or idioms). 
@@ -36,6 +41,52 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ("system", SYSTEM_INSTRUCTIONS),
     MessagesPlaceholder(variable_name="history"),
     ("human", "{user_input}"),
+])
+
+WEB_SEARCH_DECISION_INSTRUCTIONS = """
+Role: You are a routing assistant.
+Task: Decide whether the assistant should run a web search before answering the user.
+
+Rules:
+1. Use web search for fresh/time-sensitive facts (news, prices, events, current versions, real-world updates).
+2. Use web search when the user explicitly asks to check online information.
+3. Do NOT use web search for casual conversation, language practice, personal opinions, or stable common knowledge.
+4. If needed, produce a short, focused English search query.
+
+Return strict JSON:
+{
+  "need_search": true/false,
+  "query": "string",
+  "reason": "short string"
+}
+"""
+
+web_search_decision_prompt = ChatPromptTemplate.from_messages([
+    ("system", WEB_SEARCH_DECISION_INSTRUCTIONS),
+    ("system", "User profile: {user_profile}"),
+    ("system", "Recent chat history: {history_text}"),
+    ("human", "Current user message: {user_input}"),
+])
+
+WEB_SEARCH_SUMMARY_INSTRUCTIONS = """
+Role: You are a research summarizer.
+Task: Compress raw DuckDuckGo search results into a short context block for another LLM.
+
+Rules:
+1. Keep it concise: maximum 8 bullet points.
+2. Keep only high-signal facts relevant to the query.
+3. Mention source domains inline.
+4. If results conflict, mention the conflict briefly.
+5. If results are weak/unclear, say that explicitly.
+6. Output in English.
+
+Output format:
+- bullet list only
+"""
+
+web_search_summary_prompt = ChatPromptTemplate.from_messages([
+    ("system", WEB_SEARCH_SUMMARY_INSTRUCTIONS),
+    ("human", "Query: {query}\n\nRaw search results:\n{raw_results}"),
 ])
 
 CORRECTION_INSTRUCTIONS = """
