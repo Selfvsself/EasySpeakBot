@@ -6,7 +6,15 @@ from langchain_ollama import ChatOllama
 
 from config import config
 from .bio_update_prompt import bio_update_prompt
-from .chat_prompt import chat_prompt, summary_prompt, correction_prompt, translation_prompt
+from .chat_prompt import (
+    chat_prompt,
+    summary_prompt,
+    correction_prompt,
+    translation_prompt,
+    web_search_decision_prompt,
+    web_search_summary_prompt,
+)
+from .web_search import duckduckgo_search, format_search_results
 
 llm = ChatOllama(
     base_url=config.ollama_url,
@@ -27,6 +35,8 @@ bio_chain = bio_update_prompt | llm_json | JsonOutputParser()
 summary_chain = summary_prompt | llm | StrOutputParser()
 correction_chain = correction_prompt | llm | StrOutputParser()
 translation_chain = translation_prompt | llm | StrOutputParser()
+web_search_decision_chain = web_search_decision_prompt | llm_json | JsonOutputParser()
+web_search_summary_chain = web_search_summary_prompt | llm | StrOutputParser()
 
 
 async def get_llm_answer(user_text: str, history: list = None, bio_data: dict = None) -> str:
@@ -37,11 +47,38 @@ async def get_llm_answer(user_text: str, history: list = None, bio_data: dict = 
     if bio_data:
         profile_str = "\n".join([f"- {k}: {v}" for k, v in bio_data.items()])
 
+    history_text = _history_to_text(history)
+    internet_context = ""
+
+    try:
+        search_decision = await web_search_decision_chain.ainvoke({
+            "user_input": user_text,
+            "history_text": history_text,
+            "user_profile": profile_str,
+        })
+
+        need_search = bool(search_decision.get("need_search"))
+        query = str(search_decision.get("query") or "").strip()
+
+        if need_search and query:
+            raw_results = await duckduckgo_search(query)
+            if raw_results:
+                formatted_results = format_search_results(raw_results)
+                internet_context = await web_search_summary_chain.ainvoke({
+                    "query": query,
+                    "raw_results": formatted_results,
+                })
+            else:
+                internet_context = "Web search was triggered, but no reliable results were found."
+    except Exception as e:
+        logging.warning("Web search routing failed, fallback to direct answer: %s", e)
+
     try:
         response = await chat_chain.ainvoke({
             "user_input": user_text,
             "history": history,
-            "user_profile": profile_str
+            "user_profile": profile_str,
+            "internet_context": internet_context,
         })
         return response
     except Exception as e:
@@ -94,3 +131,17 @@ async def update_summary_with_llm(current_summary: str, new_messages_text: str) 
     except Exception as e:
         logging.error(f"Summary update error: {e}")
         return current_summary
+
+
+def _history_to_text(history: list) -> str:
+    if not history:
+        return ""
+
+    chunks = []
+    for msg in history[-8:]:
+        role = "assistant"
+        if getattr(msg, "type", "") == "human":
+            role = "user"
+        chunks.append(f"{role}: {msg.content}")
+
+    return "\n".join(chunks)

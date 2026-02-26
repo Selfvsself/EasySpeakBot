@@ -5,3 +5,4 @@ langchain_ollama==1.0.1
 pydantic==2.12.5
 pydantic_settings==2.13.1
 SQLAlchemy==2.0.46
+aiohttp==3.12.15
