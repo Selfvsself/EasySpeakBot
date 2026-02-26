@@ -6,8 +6,15 @@ from database.messages_requests import save_message, get_unsummarized_messages, 
 from database.users_requests import get_user_profile, update_user_profile
 from infrastructure.kafka import kafka_client
 from infrastructure.topics import MESSAGES_TOPIC, RESPONSES_TOPIC
-from utils.llm_client import get_llm_answer, check_errors_with_llm, update_bio_with_llm, update_summary_with_llm, \
-    get_translation_with_llm
+from utils.llm_client import (
+    get_llm_answer,
+    check_errors_with_llm,
+    update_bio_with_llm,
+    update_summary_with_llm,
+    get_translation_with_llm,
+    get_web_search_decision,
+    get_web_search_summary)
+from utils.web_search import duckduckgo_search, format_search_results
 
 
 async def answer_consumer_task() -> None:
@@ -40,19 +47,43 @@ async def answer_consumer_task() -> None:
                 langchain_history.append(HumanMessage(content=msg.text))
 
         await save_message(user_id=user_id, text=text, username=user_name)
+
+        history_text = "\n".join([
+            f"{'assistant' if msg.username == 'assistant' else 'user'}: {msg.text}"
+            for msg in db_history
+        ])
+        search_decision = await get_web_search_decision(text, history_text=history_text, profile_str=profile.bio_data)
+
+        need_search = search_decision.get("need_search")
+        query = search_decision.get("query")
+
+        internet_context = "Web search was not initiated as it was unnecessary."
+        if need_search and query:
+            internet_context = "Web search was triggered, but no reliable results were found."
+            raw_results = await duckduckgo_search(query)
+            if raw_results:
+                formatted_results = format_search_results(raw_results)
+                summary_result = await get_web_search_summary(text, formatted_results)
+                if summary_result:
+                    internet_context = summary_result
+
         ai_response = await get_llm_answer(
             text,
             history=langchain_history,
-            bio_data=profile.bio_data
+            bio_data=profile.bio_data,
+            internet_context=internet_context
         )
+
         ai_translation = await get_translation_with_llm(ai_response)
 
-        ai_correction = ""
+        last_message = ""
         if db_history:
-            ai_correction = await check_errors_with_llm(
-                db_history[-1].text,
-                text
-            )
+            last_message = db_history[-1].text
+
+        ai_correction = await check_errors_with_llm(
+            text,
+            last_message
+        )
 
         await save_message(user_id=user_id, text=ai_response, username="assistant")
         logging.info("Received answer from LLM for %s: %s", user_id, ai_response)
@@ -63,7 +94,8 @@ async def answer_consumer_task() -> None:
                 {"user_id": user_id,
                  "text": ai_response,
                  "translation": ai_translation,
-                 "corrections": ai_correction},
+                 "corrections": ai_correction,
+                 "internet_context": f"query: {query},\n{internet_context}"},
             )
         except Exception:
             logging.exception("Error sending response to Kafka")

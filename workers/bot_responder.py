@@ -18,6 +18,7 @@ async def answer_consumer_task() -> None:
         text = escape_markdown_v2(data.get("text"))
         corrections = escape_markdown_v2(data.get("corrections"))
         translation = escape_markdown_v2(data.get("translation"))
+        internet_context = escape_markdown_v2(data.get("internet_context"))
 
         if user_id is None or text is None:
             logging.warning("Skip invalid Kafka payload: %s", data)
@@ -32,5 +33,8 @@ async def answer_consumer_task() -> None:
             if translation:
                 await bot.send_message(chat_id=user_id, text=f"*Translation \(tap to see\):*\n||{translation}||")
                 logging.info("Send message to %s: %s", user_id, translation)
+            if internet_context:
+                await bot.send_message(chat_id=user_id, text=f"*Internet context:*\n{internet_context}")
+                logging.info("Send message to %s: %s", user_id, internet_context)
         except Exception:
             logging.exception("Error sending message to user %s", user_id)
