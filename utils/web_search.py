@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from ddgs import DDGS
 
@@ -8,26 +9,30 @@ async def duckduckgo_search(query: str, max_results: int = 10) -> list[dict]:
         return []
 
     try:
-        with DDGS() as ddgs:
-            results = ddgs.text(
-                query=query,
-                max_results=max_results,
-                region="us-en",
-                safesearch="on",
-                backend="api"
-            )
-
-            return [
-                {
-                    "title": r.get("title"),
-                    "link": r.get("href"),
-                    "snippet": r.get("body")
-                }
-                for r in results
-            ]
+        results = await asyncio.to_thread(_sync_search, query, max_results)
+        return results
     except Exception as exc:
-        logging.warning("DuckDuckGo search failed: %s", exc)
+        logging.warning("DuckDuckGo search failed: %s", exc, exc_info=True)
         return []
+
+
+def _sync_search(query: str, max_results: int) -> list[dict]:
+    with DDGS() as ddgs:
+        results = ddgs.text(
+            query=query,
+            max_results=max_results,
+            region="us-en",
+            safesearch="on",
+            backend="api"
+        )
+        return [
+            {
+                "title": r.get("title"),
+                "link": r.get("href"),
+                "snippet": r.get("body")
+            }
+            for r in results
+        ]
 
 
 def format_search_results(results: list[dict]) -> str:
