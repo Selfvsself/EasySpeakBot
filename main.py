@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from database.engine import proceed_db
-from handlers import common, start
+from handlers import text_messages, command
 from infrastructure.kafka import kafka_client
 from loader import bot, dp
 from workers import llm_worker, bot_responder
@@ -25,7 +25,7 @@ async def on_shutdown() -> None:
 
 async def main() -> None:
     await proceed_db()
-    dp.include_routers(start.router, common.router)
+    dp.include_routers(command.router, text_messages.router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 

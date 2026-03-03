@@ -115,8 +115,12 @@ async def update_summary_with_llm(current_summary: str, new_messages_text: str) 
         return current_summary
 
 
-async def get_web_search_decision(user_text: str, history_text: str, profile_str: str) -> dict:
+async def get_web_search_decision(user_text: str, history_text: str, bio_data: dict) -> dict:
     try:
+        profile_str = "No specific info known yet."
+        if bio_data:
+            profile_str = "\n".join([f"- {k}: {v}" for k, v in bio_data.items()])
+
         search_decision = await web_search_decision_chain.ainvoke({
             "user_input": user_text,
             "history_text": history_text,

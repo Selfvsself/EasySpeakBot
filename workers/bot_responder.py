@@ -15,26 +15,15 @@ def escape_markdown_v2(text: str) -> str:
 async def answer_consumer_task() -> None:
     async for data in kafka_client.consume_topic(RESPONSES_TOPIC):
         user_id = data.get("user_id")
-        text = escape_markdown_v2(data.get("text"))
-        corrections = escape_markdown_v2(data.get("corrections"))
-        translation = escape_markdown_v2(data.get("translation"))
-        internet_context = escape_markdown_v2(data.get("internet_context"))
+        response_msg = escape_markdown_v2(data.get("response_msg"))
 
-        if user_id is None or text is None:
+        if user_id is None:
             logging.warning("Skip invalid Kafka payload: %s", data)
             continue
 
         try:
-            await bot.send_message(chat_id=user_id, text=text)
-            logging.info("Send message to %s: %s", user_id, text)
-            if corrections:
-                await bot.send_message(chat_id=user_id, text=f"*Quick English Note:*\n{corrections}")
-                logging.info("Send message to %s: %s", user_id, corrections)
-            if translation:
-                await bot.send_message(chat_id=user_id, text=f"*Translation \(tap to see\):*\n||{translation}||")
-                logging.info("Send message to %s: %s", user_id, translation)
-            if internet_context:
-                await bot.send_message(chat_id=user_id, text=f"*Internet context:*\n{internet_context}")
-                logging.info("Send message to %s: %s", user_id, internet_context)
+            if response_msg:
+                await bot.send_message(chat_id=user_id, text=response_msg)
+                logging.info("Send message to %s: %s", user_id, response_msg)
         except Exception:
             logging.exception("Error sending message to user %s", user_id)
