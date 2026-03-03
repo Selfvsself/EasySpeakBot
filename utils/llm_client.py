@@ -60,6 +60,7 @@ async def get_llm_answer(
             "user_profile": profile_str,
             "internet_context": internet_context
         })
+        logging.info("get_llm_answer response: %s", response)
         return response
     except Exception as e:
         return f"Sorry, my London tube is delayed (error: {e}) 🚇"
@@ -73,6 +74,7 @@ async def check_errors_with_llm(user_text: str, last_bot_message: str = None) ->
             "alex_response": last_bot_message,
             "user_input": user_text
         })
+        logging.info("check_errors_with_llm response: %s", response)
 
         cleaned_response = response.strip()
         if cleaned_response.lower().startswith("no mistakes") or not cleaned_response:
@@ -87,6 +89,7 @@ async def check_errors_with_llm(user_text: str, last_bot_message: str = None) ->
 async def get_translation_with_llm(alex_text: str) -> str:
     try:
         response = await translation_chain.ainvoke({"alex_response": alex_text})
+        logging.info("get_translation_with_llm response: %s", response)
         return response.strip()
     except Exception as e:
         logging.error(f"Translation error: {e}")
@@ -95,10 +98,12 @@ async def get_translation_with_llm(alex_text: str) -> str:
 
 async def update_bio_with_llm(current_bio: dict, new_messages_text: str) -> dict:
     try:
-        return await bio_chain.ainvoke({
+        response = await bio_chain.ainvoke({
             "current_bio": json.dumps(current_bio, ensure_ascii=False),
             "new_messages": new_messages_text
         })
+        logging.info("update_bio_with_llm response: %s", response)
+        return response
     except Exception as e:
         logging.error(f"Bio update error: {e}")
         return current_bio
@@ -106,10 +111,12 @@ async def update_bio_with_llm(current_bio: dict, new_messages_text: str) -> dict
 
 async def update_summary_with_llm(current_summary: str, new_messages_text: str) -> str:
     try:
-        return await summary_chain.ainvoke({
+        response = await summary_chain.ainvoke({
             "current_summary": current_summary or "No history yet.",
             "new_messages": new_messages_text
         })
+        logging.info("update_bio_with_llm response: %s", response)
+        return response
     except Exception as e:
         logging.error(f"Summary update error: {e}")
         return current_summary
@@ -131,6 +138,8 @@ async def get_web_search_decision(user_text: str, history_text: str, bio_data: d
         query = str(search_decision.get("query") or "").strip()
         reason = str(search_decision.get("reason") or "").strip()
 
+        logging.info("get_web_search_decision response: %s", search_decision)
+
         return {
             "need_search": need_search,
             "query": query
@@ -145,10 +154,12 @@ async def get_web_search_decision(user_text: str, history_text: str, bio_data: d
 
 async def get_web_search_summary(query: str, formatted_results: str) -> str:
     try:
-        return await web_search_summary_chain.ainvoke({
+        response = await web_search_summary_chain.ainvoke({
                     "query": query,
                     "raw_results": formatted_results,
                 })
+        logging.info("update_bio_with_llm response: %s", response)
+        return response
     except Exception as e:
         logging.error(f"Get web search summary error: {e}")
         return ""

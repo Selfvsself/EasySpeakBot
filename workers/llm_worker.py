@@ -84,14 +84,22 @@ async def answer_consumer_task() -> None:
         elif action == TRANSLATE:
             msg_id = data.get("msg_id")
             msg = await get_message_by_id(msg_id)
-            if msg:
+            if not msg:
+                response_msg = error_text
+            elif not user_id == msg.user_id:
+                response_msg = restricted_text
+            elif msg.is_summarized:
+                response_msg = no_data_text
+            else:
                 response_msg = await get_translation_with_llm(msg.text)
                 if response_msg:
                     response_msg = f"*Translation:*\n{response_msg}"
         elif action == CORRECTION:
             msg_id = data.get("msg_id")
             msg = await get_message_by_id(msg_id)
-            if not user_id == msg.user_id:
+            if not msg:
+                response_msg = error_text
+            elif not user_id == msg.user_id:
                 response_msg = restricted_text
             elif msg.is_summarized:
                 response_msg = no_data_text
@@ -114,13 +122,14 @@ async def answer_consumer_task() -> None:
 
 
 async def get_correction_message(text: str, db_history: list = None) -> str:
-    last_message = ""
+    prev_message = ""
     if db_history:
-        last_message = db_history[-1].text
-
+        for i in range(len(db_history) - 1, -1, -1):
+            if db_history[i].text == text:
+                prev_message = db_history[i - 1].text
     return await check_errors_with_llm(
         text,
-        last_message
+        prev_message
     )
 
 

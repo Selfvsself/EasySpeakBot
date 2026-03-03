@@ -6,7 +6,6 @@ from aiogram.filters import Command
 
 from infrastructure.kafka import kafka_client
 from infrastructure.topics import RESPONSES_TOPIC, MESSAGES_TOPIC
-from workers.bot_actions import TRANSLATE, CORRECTION
 
 router = Router()
 
@@ -34,7 +33,7 @@ async def cmd_start(message: types.Message):
             "app": "easy_speak_bot",
             "user_id": message.from_user.id,
             "user_name": message.from_user.username,
-            "text": welcome_text
+            "response_msg": welcome_text
         },
     )
     logging.info("Send message to %s: %s", message.from_user.id, message.text)
@@ -59,7 +58,7 @@ async def cmd_help(message: types.Message) -> None:
             "app": "easy_speak_bot",
             "user_id": message.from_user.id,
             "user_name": message.from_user.username,
-            "text": help_text
+            "response_msg": help_text
         },
     )
     logging.info("Send message to %s: %s", message.from_user.id, message.text)
